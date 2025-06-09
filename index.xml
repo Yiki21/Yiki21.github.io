@@ -1,18 +1,20 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>My New Hugo Site</title>
-    <link>https://github.com/Yiki21/Yiki21.github.io/</link>
-    <description>Recent content on My New Hugo Site</description>
+    <title>Some Thiking</title>
+    <link>https://yiki21.github.io/</link>
+    <description>Recent content on Some Thiking</description>
     <generator>Hugo</generator>
-    <language>en-us</language>
+    <language>zh-cn</language>
+    <managingEditor>zy1772696711@gmail.com (Yiki21)</managingEditor>
+    <webMaster>zy1772696711@gmail.com (Yiki21)</webMaster>
     <lastBuildDate>Mon, 09 Jun 2025 15:48:38 +0800</lastBuildDate>
-    <atom:link href="https://github.com/Yiki21/Yiki21.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="https://yiki21.github.io/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Test</title>
-      <link>https://github.com/Yiki21/Yiki21.github.io/posts/test/</link>
-      <pubDate>Mon, 09 Jun 2025 15:48:38 +0800</pubDate>
-      <guid>https://github.com/Yiki21/Yiki21.github.io/posts/test/</guid>
+      <link>https://yiki21.github.io/posts/test/</link>
+      <pubDate>Mon, 09 Jun 2025 15:48:38 +0800</pubDate><author>zy1772696711@gmail.com (Yiki21)</author>
+      <guid>https://yiki21.github.io/posts/test/</guid>
       <description></description>
     </item>
   </channel>
