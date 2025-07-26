@@ -10,6 +10,7 @@
     <!-- 文章页面布局 -->
     <div v-else class="content-layout">
         <ContentView />
+        <Discussion />
         <Footer />
     </div>
 </template>
@@ -19,18 +20,12 @@ import { useData } from 'vitepress'
 import ContentView from './Views/ContentView.vue';
 import NotFoundView from './Views/NotFoundView.vue';
 import Footer from './Components/Footer.vue';
-const { frontmatter, page } = useData()
+import Discussion from './Components/Discussion.vue';
 
+const { frontmatter, page } = useData()
 </script>
 
 <style lang="scss" scoped>
-.content-wrapper {
-    min-height: 100vh;
-    min-width: 100vw;
-    background: linear-gradient(135deg, #1f1f23 0%, #2a2a30 100%);
-    color: #e4e4e7;
-}
-
 .home-layout {
     min-height: 100vh;
     width: 100%;
@@ -42,5 +37,6 @@ const { frontmatter, page } = useData()
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    background: linear-gradient(135deg, #1f1f23 0%, #2a2a30 100%);
 }
 </style>

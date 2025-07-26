@@ -133,7 +133,7 @@ const scrollToTop = () => {
 
 /* Main Content */
 .content-main {
-  padding: 40px 0 80px;
+  padding: 40px 0 20px;
 
   @media (max-width: 768px) {
     padding: 24px 0 60px;
@@ -290,6 +290,7 @@ const scrollToTop = () => {
     border-radius: 6px;
     padding: 2px 6px;
     font-size: 14px;
+    color: #e0e873;
   }
 
   :deep(pre) {
