@@ -1,6 +1,6 @@
 ---
 title: "为什么我更欣赏 Monad 式的错误处理"
-description: "Result、Exception 和 errcode 的一场结构化对话"
+description: "Result、Exception 和 errcode 的比较"
 date: "2025-01-26"
 category: "编程思考"
 tags: ["Rust", "Monad", "错误处理", "函数式编程"]
@@ -9,17 +9,15 @@ tags: ["Rust", "Monad", "错误处理", "函数式编程"]
 
 # 为什么我更欣赏 Monad 式的错误处理
 
-> ——一个被异常折磨过的程序员的自白
-
 ---
 
-## 引子：那些年我们踩过的错误处理坑
+## 引子：其他类型的错误处理 ?
 
 写代码这么多年，我发现最让人头疼的不是算法有多复杂，而是**错误什么时候冒出来，以及冒出来之后该怎么办**。
 
 还记得第一次写 Java 的时候，看到 `NullPointerException` 就像见鬼一样——程序好好的跑着，突然就崩了，而且往往是在最不该崩的时候。后来转 C++，开始手动管理内存，异常安全成了噩梦。再后来写 C，每个函数调用后都要检查返回值，代码变成了无穷无尽的 `if (ret != 0) return ret;`。
 
-直到接触 Rust，我才意识到：**错误处理不是程序的附属品，它本身就是程序逻辑的一部分**。
+直到接触 Rust(来自Bilibili原子能的一期视频)，我才意识到：**错误处理不是程序的附属品，它本身就是程序逻辑的一部分**
 
 程序员常用的错误处理方式大致可以分为三类：
 
@@ -52,6 +50,7 @@ public String readConfig(String filename) {
 
 
 但当你开始写复杂一点的逻辑时，问题就来了：
+于是现在很多的业务处理代码变成了如下+一堆的SpringAOP处理+Final Exception Controller
 
 ```java
 // 现实中的代码往往是这样的
@@ -79,12 +78,10 @@ public User processUserData(String userId) throws ServiceException {
 }
 ```
 
-你很快会发现问题：
-
-* **控制流变得混乱**：异常可能从任何地方抛出，程序的执行路径变得不可预测
-* **资源管理噩梦**：在 Java 里还好有 try-with-resources，但在 C++ 里你就得祈祷 RAII 救你
+* **控制流变得混乱**：异常可能从任何地方抛出，程序的执行路径变得不可预测, 而对于一些业务复杂的场景, 往往还有着重试, 撤回等操作, 让状态流程很复杂
+* **资源管理噩梦**：在 Java 里还好有 try-with-resources，但在 C++ 只能祈祷 RAII 救你🗿️
 * **异常层次设计困难**：到底该继承哪个异常？自定义异常还是用标准异常？
-* **性能损耗**：Java 的异常创建包含栈跟踪，开销不小
+* **性能损耗**：Java 的异常创建包含栈跟踪
 
 ### C++：RAII 拯救不了的异常安全
 
@@ -95,7 +92,7 @@ class ResourceManager {
     FILE* file_;
     void* buffer_;
 public:
-    ResourceManager(const char* filename) 
+    ResourceManager(const char* filename)
         : file_(fopen(filename, "r")), buffer_(malloc(1024)) {
         if (!file_) throw std::runtime_error("Cannot open file");
         if (!buffer_) {
@@ -103,12 +100,12 @@ public:
             throw std::bad_alloc();
         }
     }
-    
+
     ~ResourceManager() {
         if (file_) fclose(file_);
         if (buffer_) free(buffer_);
     }
-    
+
     void process() {
         // 如果这里抛异常，析构函数会被调用
         // 但如果析构函数也抛异常，程序就会 terminate
@@ -119,10 +116,7 @@ public:
 };
 ```
 
-异常安全编程在 C++ 里是一门艺术，需要考虑强异常保证、基本异常保证等等。大多数时候，程序员选择"不抛异常"，在一个有异常机制的语言里绕着异常走。
-
-这就像给你一个降落伞，然后告诉你最好别用它。
-
+异常安全编程在 C++ 里是一门艺术，需要考虑强异常保证、基本异常保证等等。大多数时候，程序员选择"不抛异常"，在一个有异常机制的语言里绕着异常走
 ---
 
 ## 二、errcode：纪律驱动的手工工艺品
@@ -138,13 +132,13 @@ int read_config(const char* filename, char* buffer, size_t bufsize) {
     if (!file) {
         return -1; // 文件打开失败
     }
-    
+
     size_t bytes_read = fread(buffer, 1, bufsize - 1, file);
     if (ferror(file)) {
         fclose(file);
         return -2; // 读取失败
     }
-    
+
     buffer[bytes_read] = '\0';
     fclose(file);
     return 0; // 成功
@@ -161,7 +155,7 @@ int main() {
         fprintf(stderr, "Cannot read config file\n");
         return 1;
     }
-    
+
     // 继续处理...
     return 0;
 }
@@ -174,23 +168,23 @@ int main() {
 int complex_operation(const char* input, char* output) {
     int ret1 = step1(input);
     if (ret1 != 0) return ret1;
-    
+
     int ret2 = step2(input);
     if (ret2 != 0) return ret2;
-    
+
     int ret3 = step3(input, output);
     if (ret3 != 0) return ret3;
-    
+
     int ret4 = step4(output);
     if (ret4 != 0) return ret4;
-    
+
     return 0;
 }
 ```
 
 问题在于：
 
-* **错误码语义不明确**：-1、-2、-3 到底代表什么？
+* **错误码语义不明确**：-1、-2、-3 到底代表什么？只能去看可能过时的注释或者文档
 * **重复性劳动**：每个函数调用后都要检查，代码变得冗长
 * **容易遗漏**：编译器不会提醒你检查返回值
 * **多线程陷阱**：`errno` 在多线程环境下是个定时炸弹
@@ -209,14 +203,14 @@ std::error_code read_file(const std::string& filename, std::string& content) {
     if (!file) {
         return std::make_error_code(std::errc::no_such_file_or_directory);
     }
-    
+
     content = std::string(std::istreambuf_iterator<char>(file),
                          std::istreambuf_iterator<char>());
-    
+
     if (file.bad()) {
         return std::make_error_code(std::errc::io_error);
     }
-    
+
     return {}; // 成功
 }
 
@@ -226,14 +220,14 @@ std::expected<std::string, std::error_code> read_file_v2(const std::string& file
     if (!file) {
         return std::unexpected(std::make_error_code(std::errc::no_such_file_or_directory));
     }
-    
+
     std::string content(std::istreambuf_iterator<char>(file),
                        std::istreambuf_iterator<char>());
-    
+
     if (file.bad()) {
         return std::unexpected(std::make_error_code(std::errc::io_error));
     }
-    
+
     return content;
 }
 ```
@@ -322,16 +316,16 @@ use anyhow::{Context, Result};
 fn read_user_data(user_id: u64) -> Result<UserData> {
     let db_url = std::env::var("DATABASE_URL")
         .context("DATABASE_URL environment variable not set")?;
-    
+
     let connection = establish_connection(&db_url)
         .context("Failed to connect to database")?;
-    
+
     let user = fetch_user(&connection, user_id)
         .with_context(|| format!("Failed to fetch user with ID {}", user_id))?;
-    
+
     let profile = fetch_user_profile(&connection, user_id)
         .context("Failed to fetch user profile")?;
-    
+
     Ok(UserData { user, profile })
 }
 
@@ -359,13 +353,13 @@ use thiserror::Error;
 pub enum DataStoreError {
     #[error("Connection failed")]
     ConnectionFailed(#[from] io::Error),
-    
+
     #[error("Invalid query: {query}")]
     InvalidQuery { query: String },
-    
+
     #[error("User {user_id} not found")]
     UserNotFound { user_id: u64 },
-    
+
     #[error("Permission denied for user {user_id}")]
     PermissionDenied { user_id: u64 },
 }
@@ -377,9 +371,9 @@ fn get_user(user_id: u64) -> Result<User, DataStoreError> {
             query: "user_id cannot be 0".to_string(),
         });
     }
-    
+
     // ... 其他逻辑
-    
+
     Ok(user)
 }
 ```
@@ -444,37 +438,37 @@ fn fetch_multiple_users_tolerant(user_ids: &[u64]) -> (Vec<User>, Vec<DataStoreE
 
 ```java
 public class AuthService {
-    public AuthResult authenticate(String username, String password) 
+    public AuthResult authenticate(String username, String password)
             throws AuthException {
         try {
             // 1. 验证输入
             if (username == null || username.trim().isEmpty()) {
                 throw new InvalidInputException("Username cannot be empty");
             }
-            
+
             // 2. 查找用户
             User user = userRepository.findByUsername(username);
             if (user == null) {
                 throw new UserNotFoundException("User not found: " + username);
             }
-            
+
             // 3. 验证密码
             if (!passwordService.verify(password, user.getPasswordHash())) {
                 auditService.logFailedLogin(username);
                 throw new InvalidCredentialsException("Invalid password");
             }
-            
+
             // 4. 检查用户状态
             if (!user.isActive()) {
                 throw new AccountDisabledException("Account is disabled");
             }
-            
+
             // 5. 生成令牌
             String token = tokenService.generateToken(user);
             auditService.logSuccessfulLogin(username);
-            
+
             return new AuthResult(user, token);
-            
+
         } catch (DatabaseException e) {
             throw new AuthException("Database error during authentication", e);
         } catch (TokenGenerationException e) {
@@ -510,16 +504,16 @@ typedef struct {
     int user_id;
 } auth_data_t;
 
-auth_result_t authenticate(const char* username, const char* password, 
+auth_result_t authenticate(const char* username, const char* password,
                           auth_data_t* result) {
     if (!username || strlen(username) == 0) {
         return AUTH_INVALID_INPUT;
     }
-    
+
     if (!password || !result) {
         return AUTH_INVALID_INPUT;
     }
-    
+
     // 查找用户
     user_t user;
     int ret = find_user_by_username(username, &user);
@@ -528,7 +522,7 @@ auth_result_t authenticate(const char* username, const char* password,
     } else if (ret != 0) {
         return AUTH_DATABASE_ERROR;
     }
-    
+
     // 验证密码
     ret = verify_password(password, user.password_hash);
     if (ret == PASSWORD_MISMATCH) {
@@ -538,19 +532,19 @@ auth_result_t authenticate(const char* username, const char* password,
     } else if (ret != 0) {
         return AUTH_DATABASE_ERROR;
     }
-    
+
     // 检查用户状态
     if (!user.is_active) {
         return AUTH_ACCOUNT_DISABLED;
     }
-    
+
     // 生成令牌
     char token[512];
     ret = generate_token(&user, token, sizeof(token));
     if (ret != 0) {
         return AUTH_TOKEN_ERROR;
     }
-    
+
     // 记录成功登录
     ret = audit_log_successful_login(username);
     if (ret != 0) {
@@ -558,14 +552,14 @@ auth_result_t authenticate(const char* username, const char* password,
         // 返回错误还是忽略？
         return AUTH_AUDIT_ERROR;
     }
-    
+
     // 填充结果
     strncpy(result->username, username, sizeof(result->username) - 1);
     result->username[sizeof(result->username) - 1] = '\0';
     strncpy(result->token, token, sizeof(result->token) - 1);
     result->token[sizeof(result->token) - 1] = '\0';
     result->user_id = user.id;
-    
+
     return AUTH_SUCCESS;
 }
 ```
@@ -580,22 +574,22 @@ use anyhow::Context;
 pub enum AuthError {
     #[error("Invalid input: {message}")]
     InvalidInput { message: String },
-    
+
     #[error("User not found: {username}")]
     UserNotFound { username: String },
-    
+
     #[error("Invalid credentials")]
     InvalidCredentials,
-    
+
     #[error("Account disabled")]
     AccountDisabled,
-    
+
     #[error("Database error")]
     DatabaseError(#[from] DatabaseError),
-    
+
     #[error("Token generation failed")]
     TokenError(#[from] TokenError),
-    
+
     #[error("System error")]
     SystemError(#[from] anyhow::Error),
 }
@@ -607,16 +601,16 @@ pub struct AuthResult {
 }
 
 impl AuthService {
-    pub async fn authenticate(&self, username: &str, password: &str) 
+    pub async fn authenticate(&self, username: &str, password: &str)
         -> Result<AuthResult, AuthError> {
-        
+
         // 1. 验证输入
         if username.trim().is_empty() {
             return Err(AuthError::InvalidInput {
                 message: "Username cannot be empty".to_string(),
             });
         }
-        
+
         // 2. 查找用户
         let user = self.user_repository
             .find_by_username(username)
@@ -624,7 +618,7 @@ impl AuthService {
             .ok_or_else(|| AuthError::UserNotFound {
                 username: username.to_string(),
             })?;
-        
+
         // 3. 验证密码
         if !self.password_service.verify(password, &user.password_hash)? {
             // 异步记录失败登录，不影响主流程
@@ -634,18 +628,18 @@ impl AuthService {
                     tracing::warn!("Failed to log failed login: {}", e);
                 }
             });
-            
+
             return Err(AuthError::InvalidCredentials);
         }
-        
+
         // 4. 检查用户状态
         if !user.is_active {
             return Err(AuthError::AccountDisabled);
         }
-        
+
         // 5. 生成令牌
         let token = self.token_service.generate_token(&user)?;
-        
+
         // 6. 记录成功登录（异步，不阻塞返回）
         let username = username.to_string();
         let audit_service = self.audit_service.clone();
@@ -654,14 +648,14 @@ impl AuthService {
                 tracing::warn!("Failed to log successful login: {}", e);
             }
         });
-        
+
         Ok(AuthResult { user, token })
     }
-    
+
     // 批量认证用户
-    pub async fn authenticate_batch(&self, credentials: &[(String, String)]) 
+    pub async fn authenticate_batch(&self, credentials: &[(String, String)])
         -> Vec<Result<AuthResult, AuthError>> {
-        
+
         // 并发处理，但保持错误信息
         futures::future::join_all(
             credentials.iter().map(|(username, password)| {
@@ -669,13 +663,13 @@ impl AuthService {
             })
         ).await
     }
-    
+
     // 容错的批量认证
-    pub async fn authenticate_batch_tolerant(&self, credentials: &[(String, String)]) 
+    pub async fn authenticate_batch_tolerant(&self, credentials: &[(String, String)])
         -> (Vec<AuthResult>, Vec<(String, AuthError)>) {
-        
+
         let results = self.authenticate_batch(credentials).await;
-        
+
         results.into_iter()
             .zip(credentials.iter())
             .fold(
@@ -704,6 +698,8 @@ impl AuthService {
 2. **不可恢复的错误**：配置文件损坏、必要依赖不可用
 3. **跨越多层调用栈的错误传播**：深层递归中的错误
 
+而且对于需要经常通过调用栈来实现业务debug的工作来说, 其实也很方便
+
 ```java
 // 这种情况下异常是合理的
 public void initializeSystem() throws SystemInitializationException {
@@ -723,8 +719,6 @@ public void initializeSystem() throws SystemInitializationException {
 错误码适合：
 
 1. **性能敏感的代码**：高频调用的底层函数
-2. **系统编程**：操作系统接口、驱动程序
-3. **需要明确控制流的场景**：实时系统
 
 ```c
 // 高性能的数据处理函数
@@ -732,12 +726,12 @@ int process_packet(const uint8_t* data, size_t len, packet_t* result) {
     if (!data || len == 0 || !result) {
         return -EINVAL;
     }
-    
+
     // 快速返回，没有额外开销
     if (len < MIN_PACKET_SIZE) {
         return -EMSGSIZE;
     }
-    
+
     // ... 处理逻辑
     return 0;
 }
@@ -758,12 +752,12 @@ async fn process_order(order_request: OrderRequest) -> Result<Order, OrderError>
     let inventory_check = check_inventory(&validated_request.items).await?;
     let payment_result = process_payment(&validated_request.payment).await?;
     let order = create_order(validated_request, inventory_check, payment_result)?;
-    
+
     // 后续处理可以优雅地组合
     notify_customer(&order).await
         .map_err(|e| tracing::warn!("Failed to notify customer: {}", e))
         .ok(); // 通知失败不影响订单创建
-    
+
     Ok(order)
 }
 ```
@@ -772,11 +766,11 @@ async fn process_order(order_request: OrderRequest) -> Result<Order, OrderError>
 
 ## 六、最后的话：工程是关于权衡的艺术
 
-写了这么多年代码，我越来越相信：**好的错误处理不是为了消除错误，而是为了让错误变得可控、可预测、可恢复**。
+以前看某个博客说的: **好的错误处理不是为了消除错误，而是为了让错误变得可控、可预测、可恢复**。
 
 异常有它的历史地位，在处理真正"异常"的情况时仍然有用。错误码在系统编程和性能敏感的场景下不可替代。但对于现代应用开发，特别是业务逻辑复杂、并发性要求高的系统，**Monad 式的错误处理提供了更好的工程实践**。
 
-它不是银弹，但它让我们：
+它不是银弹，但它让:
 
 1. **在编译期就知道什么地方可能出错**
 2. **强制程序员面对和处理错误**
