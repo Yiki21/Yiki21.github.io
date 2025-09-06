@@ -1,8 +1,8 @@
 ---
-title: "Kubernetes 中 MySQL 数据库字符集配置与初始化最佳实践"
-date: 2024-06-24
-tags: ["Kubernetes", "MySQL", "Database", "Character Encoding", "DevOps"]
+title: "Kubernetes 中 MySQL 使用 init.sql & configmap 进行挂载的环境下, 字符集问题以及解决方案"
+date: 2025-09-06
 category: "Tips"
+tags: ["Kubernetes", "MySQL", "Database", "Character Encoding", "DevOps"]
 description: "在 Kubernetes 环境中部署 MySQL 数据库时, 使用init.sql存入configmap/secrets, 并且在Statefilset中进行挂载这种草率测试环境下的字符集产生的问题"
 ---
 
