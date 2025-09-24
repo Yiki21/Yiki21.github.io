@@ -2,7 +2,7 @@
 title: "为什么我更欣赏 Monad 式的错误处理"
 description: "Result、Exception 和 errcode 的比较"
 date: "2025-01-26"
-category: "编程思考"
+category: "Coding"
 tags: ["Rust", "Monad", "错误处理", "函数式编程"]
 ---
 ---
