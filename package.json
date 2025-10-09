@@ -16,6 +16,8 @@
     "fast-glob": "^3.3.2",
     "feed": "^4.2.2",
     "gray-matter": "^4.0.3",
+    "markdown-it": "^14.1.0",
+    "@types/markdown-it": "^14.1.2",
     "@types/node": "^20.14.10"
   },
   "dependencies": {

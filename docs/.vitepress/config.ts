@@ -2,6 +2,7 @@ import { defineConfig } from "vitepress";
 import fg from "fast-glob";
 import matter from "gray-matter";
 import { Feed } from "feed";
+import MarkdownIt from "markdown-it";
 import { readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
@@ -10,6 +11,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const SITE_URL = "https://yiki21.github.io";
 const BLOG_SOURCE_DIR = join(__dirname, "../blogs");
 const AUTHOR_NAME = "Yiki";
+const markdown = new MarkdownIt({ html: true, linkify: true, typographer: true, breaks: true });
 
 function stripMarkdown(text: string): string {
     return text
@@ -20,6 +22,28 @@ function stripMarkdown(text: string): string {
         .replace(/[*_>#-]/g, "")
         .replace(/\s+/g, " ")
         .trim();
+}
+
+function convertRelativeLinksToAbsolute(html: string, baseUrl: string): string {
+    return html.replace(/(src|href)="(.*?)"/g, (match, attr, value) => {
+        if (
+            !value ||
+            value.startsWith("data:") ||
+            value.startsWith("#") ||
+            value.startsWith("mailto:") ||
+            value.startsWith("tel:") ||
+            /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(value)
+        ) {
+            return match;
+        }
+
+        try {
+            const absolute = new URL(value, baseUrl).toString();
+            return `${attr}="${absolute}"`;
+        } catch (error) {
+            return match;
+        }
+    });
 }
 
 async function generateRSS(outDir: string) {
@@ -49,6 +73,8 @@ async function generateRSS(outDir: string) {
         title: string;
         description: string;
         date: Date;
+        content: string;
+        categories: string[];
     }> = [];
 
     for (const file of files) {
@@ -60,22 +86,36 @@ async function generateRSS(outDir: string) {
 
         const route = file.replace(/\.md$/, ".html");
         const url = new URL(route, SITE_URL).toString();
+        const baseUrl = new URL("./", url).toString();
         const title = data?.title ?? route;
         const description = data?.description ?? stripMarkdown(content).slice(0, 280);
         const published = data?.date ? new Date(data.date) : new Date();
+        const rawHtml = markdown.render(content);
+        const absolutizedHtml = convertRelativeLinksToAbsolute(rawHtml, baseUrl);
+        const tags = Array.isArray(data?.tags) ? data.tags.map(String) : [];
+        const categories = [data?.category, ...tags].filter(Boolean) as string[];
 
-        entries.push({ url, title, description, date: published });
+        entries.push({
+            url,
+            title,
+            description,
+            date: published,
+            content: absolutizedHtml,
+            categories,
+        });
     }
 
     entries
         .sort((a, b) => b.date.getTime() - a.date.getTime())
-        .forEach(({ url, title, description, date }) => {
+        .forEach(({ url, title, description, date, content, categories }) => {
             feed.addItem({
                 id: url,
                 link: url,
                 title,
                 description,
+                content,
                 date,
+                category: categories.map((name) => ({ name })),
                 author: [
                     {
                         name: AUTHOR_NAME,
