@@ -139,6 +139,7 @@
                             <span class="tech-item">C++</span>
                             <span class="tech-item">Java & Spring & Netty</span>
                             <span class="tech-item">Rust</span>
+                            <span class="tech-item">GNU/Linux</span>
                         </div>
                     </div>
                 </div>
