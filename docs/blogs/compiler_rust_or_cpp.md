@@ -1,5 +1,5 @@
 ---
-title: "编译器我选Rust来编写"
+title: "用了 Cpp, 我彻底爱上 Rust"
 date: 2024-09-24
 tags: ["Rust", "Cpp", "Compiler", "AST", "编程语言", "性能对比"]
 category: "Coding"
