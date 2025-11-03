@@ -112,7 +112,7 @@ cat /proc/<PID>/environ | tr '\0' '\n' | grep GITHUB_TOKEN
 
 ## 注意事项
 
-1. **不同的 LSP 可能使用不同的环境变量名**，常见的包括：
+1. **不同的 LSP 可能使用不同的环境变量名**，可能有：
    - `GITHUB_TOKEN`
    - `GH_TOKEN`
    - `GITHUB_API_TOKEN`
@@ -124,11 +124,13 @@ cat /proc/<PID>/environ | tr '\0' '\n' | grep GITHUB_TOKEN
    - 定期轮换 token
    - 使用最小权限原则（LSP 只需公共读取权限）
 
-3. **桌面环境差异**：
-   - GNOME/KDE：通常会读取 `~/.config/environment.d/`
-   - i3/sway：可能需要在 `~/.xinitrc` 或 `~/.config/sway/config` 中设置
-   - macOS：使用 `launchctl setenv` 或 `/etc/launchd.conf`
+3. **特殊情况：非 systemd 用户会话**：
+   - 如果你的桌面环境**没有完整的 `systemd --user` 会话**（例如手动启动 i3 或 Sway），`~/.config/environment.d/` 可能不会被读取
+   - 这种情况下，需要在窗口管理器的配置文件中设置环境变量：
+     - i3: 在 `~/.xinitrc` 或 `~/.config/i3/config` 中添加 `exec --no-startup-id export GITHUB_TOKEN="..."`
+     - Sway: 在 `~/.config/sway/config` 中添加 `exec export GITHUB_TOKEN="..."`
+   - **推荐做法**：如果你的系统使用 systemd 启动 i3/Sway，仍然建议使用 `environment.d/`，这样更统一、更安全
 
-## 总结
-
-通过正确设置 `GITHUB_TOKEN` 环境变量，可以将 GitHub API 的速率限制从 60/小时提升到 5000/小时，彻底解决 LSP 的 rate limit 问题。根据你的使用场景（终端启动 vs 图形界面启动），选择合适的配置方法即可。
+4. **macOS 用户**：
+   - 使用 `launchctl setenv GITHUB_TOKEN "ghp_xxx"` 设置全局环境变量
+   - 或在 `~/.zshrc` / `~/.bash_profile` 中设置（仅对终端启动的应用有效）
