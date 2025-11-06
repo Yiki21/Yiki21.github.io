@@ -1,6 +1,6 @@
 ---
 title: "用 C++ 写编译器踩坑后，我选择了 Rust"
-date: 2024-09-24
+date: 2025-09-24
 tags: ["Rust", "C++", "Compiler", "AST", "编程语言"]
 category: "Coding"
 description: "从 C++ 迁移到 Rust 编写编译器的真实经历：我遇到了哪些坑，Rust 如何帮我解决的"
