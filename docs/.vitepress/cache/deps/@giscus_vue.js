@@ -5,7 +5,8 @@ import {
   onMounted,
   openBlock,
   ref
-} from "./chunk-HVR2FF6M.js";
+} from "./chunk-TICTUL3T.js";
+import "./chunk-BUSYA2B4.js";
 
 // node_modules/@giscus/vue/dist/index.js
 var d = ["id", "host", "repo", "repoid", "category", "categoryid", "mapping", "term", "strict", "reactionsenabled", "emitmetadata", "inputposition", "theme", "lang", "loading"];
@@ -31,7 +32,7 @@ var l = defineComponent({
   setup(s) {
     const t = ref(false);
     return onMounted(() => {
-      import("./giscus-Ci9LqPcC-OV6IBXWV.js").then(() => t.value = true);
+      import("./giscus-Ci9LqPcC-6PAFN4MG.js").then(() => t.value = true);
     }), (e, m) => t.value ? (openBlock(), createElementBlock("giscus-widget", {
       key: 0,
       id: e.id,

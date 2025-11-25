@@ -6,6 +6,7 @@ import MarkdownIt from "markdown-it";
 import { readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
+import { withMermaid } from "vitepress-plugin-mermaid";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SITE_URL = "https://yiki21.github.io";
@@ -130,7 +131,7 @@ async function generateRSS(outDir: string) {
 }
 
 // https://vitepress.vuejs.org/config/app-configs
-export default defineConfig({
+export default withMermaid({
     head: [
         [
             'link',
@@ -167,6 +168,12 @@ export default defineConfig({
     ],
     
     srcDir: './blogs',
+
+    mermaid: {
+        theme: 'dark',
+        look : 'handDrawn',
+        darkMode: true,
+    },
 
     vite: {
         resolve: {

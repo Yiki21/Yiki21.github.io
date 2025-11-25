@@ -1,3 +1,5 @@
+import "./chunk-BUSYA2B4.js";
+
 // node_modules/@giscus/vue/dist/giscus-Ci9LqPcC.js
 var H = globalThis;
 var V = H.ShadowRoot && (H.ShadyCSS === void 0 || H.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype;
@@ -946,23 +948,4 @@ p = $([
 export {
   p as GiscusWidget
 };
-/*! Bundled license information:
-
-@giscus/vue/dist/giscus-Ci9LqPcC.js:
-  (**
-   * @license
-   * Copyright 2019 Google LLC
-   * SPDX-License-Identifier: BSD-3-Clause
-   *)
-  (**
-   * @license
-   * Copyright 2017 Google LLC
-   * SPDX-License-Identifier: BSD-3-Clause
-   *)
-  (**
-   * @license
-   * Copyright 2020 Google LLC
-   * SPDX-License-Identifier: BSD-3-Clause
-   *)
-*/
-//# sourceMappingURL=giscus-Ci9LqPcC-OV6IBXWV.js.map
+//# sourceMappingURL=giscus-Ci9LqPcC-6PAFN4MG.js.map

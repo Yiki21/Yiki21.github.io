@@ -36,7 +36,8 @@ import {
   unref,
   watch,
   watchEffect
-} from "./chunk-HVR2FF6M.js";
+} from "./chunk-TICTUL3T.js";
+import "./chunk-BUSYA2B4.js";
 
 // node_modules/@vueuse/shared/index.mjs
 function computedEager(fn, options) {
@@ -1574,6 +1575,7 @@ function whenever(source, cb, options) {
 
 // node_modules/@vueuse/core/index.mjs
 function computedAsync(evaluationCallback, initialState, optionsOrRef) {
+  var _a;
   let options;
   if (isRef(optionsOrRef)) {
     options = {
@@ -1587,7 +1589,7 @@ function computedAsync(evaluationCallback, initialState, optionsOrRef) {
     flush = "pre",
     evaluating = void 0,
     shallow = true,
-    onError = noop
+    onError = (_a = globalThis.reportError) != null ? _a : noop
   } = options;
   const started = shallowRef(!lazy);
   const current = shallow ? shallowRef(initialState) : ref(initialState);
@@ -1917,12 +1919,12 @@ function useMutationObserver(target, callback, options = {}) {
     return new Set(items);
   });
   const stopWatch = watch(
-    () => targets.value,
-    (targets2) => {
+    targets,
+    (newTargets) => {
       cleanup();
-      if (isSupported.value && targets2.size) {
+      if (isSupported.value && newTargets.size) {
         observer = new MutationObserver(callback);
-        targets2.forEach((el) => observer.observe(el, mutationOptions));
+        newTargets.forEach((el) => observer.observe(el, mutationOptions));
       }
     },
     { immediate: true, flush: "post" }
@@ -2053,6 +2055,13 @@ function onLongPress(target, handler, options) {
     startTimestamp = void 0;
     hasLongPressed = false;
   }
+  function getDelay(ev) {
+    const delay = options == null ? void 0 : options.delay;
+    if (typeof delay === "function") {
+      return delay(ev);
+    }
+    return delay != null ? delay : DEFAULT_DELAY;
+  }
   function onRelease(ev) {
     var _a2, _b2, _c;
     const [_startTimestamp, _posStart, _hasLongPressed] = [startTimestamp, posStart, hasLongPressed];
@@ -2071,7 +2080,7 @@ function onLongPress(target, handler, options) {
     options.onMouseUp(ev.timeStamp - _startTimestamp, distance, _hasLongPressed);
   }
   function onDown(ev) {
-    var _a2, _b2, _c, _d;
+    var _a2, _b2, _c;
     if (((_a2 = options == null ? void 0 : options.modifiers) == null ? void 0 : _a2.self) && ev.target !== elementRef.value)
       return;
     clear();
@@ -2089,7 +2098,7 @@ function onLongPress(target, handler, options) {
         hasLongPressed = true;
         handler(ev);
       },
-      (_d = options == null ? void 0 : options.delay) != null ? _d : DEFAULT_DELAY
+      getDelay(ev)
     );
   }
   function onMove(ev) {
@@ -2412,7 +2421,7 @@ function useAnimate(target, keyframes, options) {
   };
   watch(() => unrefElement(target), (el) => {
     if (el) {
-      update();
+      update(true);
     } else {
       animate.value = void 0;
     }
@@ -2566,10 +2575,11 @@ function whenAborted(signal) {
   });
 }
 function useAsyncState(promise, initialState, options) {
+  var _a;
   const {
     immediate = true,
     delay = 0,
-    onError = noop,
+    onError = (_a = globalThis.reportError) != null ? _a : noop,
     onSuccess = noop,
     resetOnExecute = true,
     shallow = true,
@@ -2581,7 +2591,7 @@ function useAsyncState(promise, initialState, options) {
   const error = shallowRef(void 0);
   async function execute(delay2 = 0, ...args) {
     if (resetOnExecute)
-      state.value = initialState;
+      state.value = toValue(initialState);
     error.value = void 0;
     isReady.value = false;
     isLoading.value = true;
@@ -3260,8 +3270,9 @@ function useClipboardItems(options = {}) {
       });
     }
   }
-  if (isSupported.value && read)
+  if (isSupported.value && read) {
     useEventListener(["copy", "cut"], updateContent, { passive: true });
+  }
   async function copy(value = toValue(source)) {
     if (isSupported.value && value != null) {
       await navigator2.clipboard.write(value);
@@ -3272,9 +3283,10 @@ function useClipboardItems(options = {}) {
   }
   return {
     isSupported,
-    content,
-    copied,
-    copy
+    content: shallowReadonly(content),
+    copied: readonly(copied),
+    copy,
+    read: updateContent
   };
 }
 function cloneFnJSON(source) {
@@ -3407,7 +3419,7 @@ function useStorage(key, defaults2, storage, options = {}) {
   const serializer = (_a = options.serializer) != null ? _a : StorageSerializers[type];
   const { pause: pauseWatch, resume: resumeWatch } = watchPausable(
     data,
-    () => write(data.value),
+    (newValue) => write(newValue),
     { flush, deep, eventFilter }
   );
   watch(keyComputed, () => update(), { flush });
@@ -3494,12 +3506,15 @@ function useStorage(key, defaults2, storage, options = {}) {
       data.value = rawInit;
       return;
     }
-    if (event && event.key !== keyComputed.value)
+    if (event && event.key !== keyComputed.value) {
       return;
+    }
     pauseWatch();
     try {
-      if ((event == null ? void 0 : event.newValue) !== serializer.write(data.value))
+      const serializedData = serializer.write(data.value);
+      if (event === void 0 || (event == null ? void 0 : event.newValue) !== serializedData) {
         data.value = read(event);
+      }
     } catch (e) {
       onError(e);
     } finally {
@@ -4782,7 +4797,10 @@ function useEventSource(url, events2 = [], options = {}) {
     withCredentials = false,
     immediate = true,
     autoConnect = true,
-    autoReconnect
+    autoReconnect,
+    serializer = {
+      read: (v) => v
+    }
   } = options;
   const close = () => {
     if (isClient && eventSource.value) {
@@ -4822,15 +4840,17 @@ function useEventSource(url, events2 = [], options = {}) {
       }
     };
     es.onmessage = (e) => {
+      var _a;
       event.value = null;
-      data.value = e.data;
+      data.value = (_a = serializer.read(e.data)) != null ? _a : null;
       lastEventId.value = e.lastEventId;
     };
     for (const event_name of events2) {
       useEventListener(es, event_name, (e) => {
+        var _a, _b;
         event.value = event_name;
-        data.value = e.data || null;
-        lastEventId.value = e.lastEventId || null;
+        data.value = (_a = serializer.read(e.data)) != null ? _a : null;
+        lastEventId.value = (_b = e.lastEventId) != null ? _b : null;
       }, { passive: true });
     }
   };
@@ -5272,43 +5292,56 @@ function useFileDialog(options = {}) {
   const files = ref(prepareInitialFiles(options.initialFiles));
   const { on: onChange, trigger: changeTrigger } = createEventHook();
   const { on: onCancel, trigger: cancelTrigger } = createEventHook();
-  let input;
-  if (document2) {
-    input = unrefElement(options.input) || document2.createElement("input");
-    input.type = "file";
-    input.onchange = (event) => {
-      const result = event.target;
-      files.value = result.files;
-      changeTrigger(files.value);
-    };
-    input.oncancel = () => {
-      cancelTrigger();
-    };
-  }
+  const inputRef = computed(() => {
+    var _a;
+    const input = (_a = unrefElement(options.input)) != null ? _a : document2 ? document2.createElement("input") : void 0;
+    if (input) {
+      input.type = "file";
+      input.onchange = (event) => {
+        const result = event.target;
+        files.value = result.files;
+        changeTrigger(files.value);
+      };
+      input.oncancel = () => {
+        cancelTrigger();
+      };
+    }
+    return input;
+  });
   const reset = () => {
     files.value = null;
-    if (input && input.value) {
-      input.value = "";
+    if (inputRef.value && inputRef.value.value) {
+      inputRef.value.value = "";
       changeTrigger(null);
     }
   };
-  const open = (localOptions) => {
-    if (!input)
+  const applyOptions = (options2) => {
+    const el = inputRef.value;
+    if (!el)
       return;
-    const _options = {
+    el.multiple = toValue(options2.multiple);
+    el.accept = toValue(options2.accept);
+    el.webkitdirectory = toValue(options2.directory);
+    if (hasOwn(options2, "capture"))
+      el.capture = toValue(options2.capture);
+  };
+  const open = (localOptions) => {
+    const el = inputRef.value;
+    if (!el)
+      return;
+    const mergedOptions = {
       ...DEFAULT_OPTIONS,
       ...options,
       ...localOptions
     };
-    input.multiple = _options.multiple;
-    input.accept = _options.accept;
-    input.webkitdirectory = _options.directory;
-    if (hasOwn(_options, "capture"))
-      input.capture = _options.capture;
-    if (_options.reset)
+    applyOptions(mergedOptions);
+    if (toValue(mergedOptions.reset))
       reset();
-    input.click();
+    el.click();
   };
+  watchEffect(() => {
+    applyOptions(options);
+  });
   return {
     files: readonly(files),
     open,
@@ -6188,9 +6221,13 @@ function useMagicKeys(options = {}) {
       setRefs(key2, value);
     }
     if (key === "shift" && !value) {
-      shiftDeps.forEach((key2) => {
-        current.delete(key2);
-        setRefs(key2, false);
+      const shiftDepsArray = Array.from(shiftDeps);
+      const shiftIndex = shiftDepsArray.indexOf("shift");
+      shiftDepsArray.forEach((key2, index) => {
+        if (index >= shiftIndex) {
+          current.delete(key2);
+          setRefs(key2, false);
+        }
       });
       shiftDeps.clear();
     } else if (typeof e.getModifierState === "function" && e.getModifierState("Shift") && value) {
@@ -6708,7 +6745,7 @@ function useMouseInElement(target, options = {}) {
     const elX = x.value - elementPositionX.value;
     const elY = y.value - elementPositionY.value;
     isOutside.value = width === 0 || height === 0 || elX < 0 || elY < 0 || elX > width || elY > height;
-    if (handleOutside) {
+    if (handleOutside || !isOutside.value) {
       elementX.value = elX;
       elementY.value = elY;
     }
@@ -7174,7 +7211,7 @@ function usePointer(options = {}) {
     target = defaultWindow
   } = options;
   const isInside = shallowRef(false);
-  const state = ref(options.initialValue || {});
+  const state = shallowRef(options.initialValue || {});
   Object.assign(state.value, defaultState, state.value);
   const handler = (event) => {
     isInside.value = true;
@@ -7366,9 +7403,9 @@ function usePreferredContrast(options) {
 function usePreferredLanguages(options = {}) {
   const { window: window2 = defaultWindow } = options;
   if (!window2)
-    return ref(["en"]);
+    return shallowRef(["en"]);
   const navigator2 = window2.navigator;
-  const value = ref(navigator2.languages);
+  const value = shallowRef(navigator2.languages);
   useEventListener(window2, "languagechange", () => {
     value.value = navigator2.languages;
   }, { passive: true });
@@ -7750,7 +7787,8 @@ function useSpeechSynthesis(text, options = {}) {
     pitch = 1,
     rate = 1,
     volume = 1,
-    window: window2 = defaultWindow
+    window: window2 = defaultWindow,
+    onBoundary
   } = options;
   const synth = window2 && window2.speechSynthesis;
   const isSupported = useSupported(() => synth);
@@ -7786,6 +7824,9 @@ function useSpeechSynthesis(text, options = {}) {
     };
     utterance2.onerror = (event) => {
       error.value = event;
+    };
+    utterance2.onboundary = (event) => {
+      onBoundary == null ? void 0 : onBoundary(event);
     };
   };
   const utterance = computed(() => {
@@ -7923,7 +7964,8 @@ function useStorageAsync(key, initialValue, storage, options = {}) {
     eventFilter,
     onError = (e) => {
       console.error(e);
-    }
+    },
+    onReady
   } = options;
   const rawInit = toValue(initialValue);
   const type = guessSerializerType(rawInit);
@@ -7962,7 +8004,12 @@ function useStorageAsync(key, initialValue, storage, options = {}) {
       onError(e);
     }
   }
-  read();
+  const promise = new Promise((resolve) => {
+    read().then(() => {
+      onReady == null ? void 0 : onReady(data.value);
+      resolve(data);
+    });
+  });
   if (window2 && listenToStorageChanges)
     useEventListener(window2, "storage", (e) => Promise.resolve().then(() => read(e)), { passive: true });
   if (storage) {
@@ -7985,6 +8032,10 @@ function useStorageAsync(key, initialValue, storage, options = {}) {
       }
     );
   }
+  Object.assign(data, {
+    then: promise.then.bind(promise),
+    catch: promise.catch.bind(promise)
+  });
   return data;
 }
 var _id = 0;
@@ -8338,6 +8389,74 @@ function formatTimeAgo(from, options = {}, now2 = Date.now()) {
   }
   return messages.invalid;
 }
+var UNITS = [
+  { name: "year", ms: 31536e6 },
+  { name: "month", ms: 2592e6 },
+  { name: "week", ms: 6048e5 },
+  { name: "day", ms: 864e5 },
+  { name: "hour", ms: 36e5 },
+  { name: "minute", ms: 6e4 },
+  { name: "second", ms: 1e3 }
+];
+function useTimeAgoIntl(time, options = {}) {
+  const {
+    controls: exposeControls = false,
+    updateInterval = 3e4
+  } = options;
+  const { now: now2, ...controls } = useNow({ interval: updateInterval, controls: true });
+  const result = computed(
+    () => getTimeAgoIntlResult(new Date(toValue(time)), options, toValue(now2))
+  );
+  const parts = computed(() => result.value.parts);
+  const timeAgoIntl = computed(
+    () => formatTimeAgoIntlParts(parts.value, {
+      ...options,
+      locale: result.value.resolvedLocale
+    })
+  );
+  return exposeControls ? { timeAgoIntl, parts, ...controls } : timeAgoIntl;
+}
+function formatTimeAgoIntl(from, options = {}, now2 = Date.now()) {
+  const { parts, resolvedLocale } = getTimeAgoIntlResult(from, options, now2);
+  return formatTimeAgoIntlParts(parts, {
+    ...options,
+    locale: resolvedLocale
+  });
+}
+function getTimeAgoIntlResult(from, options = {}, now2 = Date.now()) {
+  const {
+    locale,
+    relativeTimeFormatOptions = { numeric: "auto" }
+  } = options;
+  const rtf = new Intl.RelativeTimeFormat(locale, relativeTimeFormatOptions);
+  const { locale: resolvedLocale } = rtf.resolvedOptions();
+  const diff = +from - +now2;
+  const absDiff = Math.abs(diff);
+  for (const { name, ms } of UNITS) {
+    if (absDiff >= ms) {
+      return {
+        resolvedLocale,
+        parts: rtf.formatToParts(Math.round(diff / ms), name)
+      };
+    }
+  }
+  return {
+    resolvedLocale,
+    parts: rtf.formatToParts(0, "second")
+  };
+}
+function formatTimeAgoIntlParts(parts, options = {}) {
+  const {
+    insertSpace = true,
+    joinParts,
+    locale
+  } = options;
+  if (typeof joinParts === "function")
+    return joinParts(parts, locale);
+  if (!insertSpace)
+    return parts.map((part) => part.value).join("");
+  return parts.map((part) => part.value.trim()).join(" ");
+}
 function useTimeoutPoll(fn, interval, options = {}) {
   const {
     immediate = true,
@@ -8491,6 +8610,9 @@ function toVec(t) {
 }
 function executeTransition(source, from, to, options = {}) {
   var _a, _b;
+  const {
+    window: window2 = defaultWindow
+  } = options;
   const fromVal = toValue(from);
   const toVal = toValue(to);
   const v1 = toVec(fromVal);
@@ -8519,7 +8641,7 @@ function executeTransition(source, from, to, options = {}) {
       else if (typeof source.value === "number")
         source.value = arr[0];
       if (now2 < endAt) {
-        requestAnimationFrame(tick);
+        window2 == null ? void 0 : window2.requestAnimationFrame(tick);
       } else {
         source.value = toVal;
         resolve();
@@ -8633,7 +8755,7 @@ function useUrlSearchParams(mode = "history", options = {}) {
     },
     { deep: true }
   );
-  function write(params, shouldUpdate) {
+  function write(params, shouldUpdate, shouldWriteHistory = true) {
     pause();
     if (shouldUpdate)
       updateState(params);
@@ -8644,18 +8766,20 @@ function useUrlSearchParams(mode = "history", options = {}) {
         window2.location.pathname + constructQuery(params)
       );
     } else {
-      window2.history.pushState(
-        window2.history.state,
-        window2.document.title,
-        window2.location.pathname + constructQuery(params)
-      );
+      if (shouldWriteHistory) {
+        window2.history.pushState(
+          window2.history.state,
+          window2.document.title,
+          window2.location.pathname + constructQuery(params)
+        );
+      }
     }
-    resume();
+    nextTick(() => resume());
   }
   function onChanged() {
     if (!enableWrite)
       return;
-    write(read(), true);
+    write(read(), true, false);
   }
   const listenerOptions = { passive: true };
   useEventListener(window2, "popstate", onChanged, listenerOptions);
@@ -8948,7 +9072,7 @@ function createGetDistance(itemSize, source) {
   };
 }
 function useWatchForSizes(size, list, containerRef, calculateRange) {
-  watch([size.width, size.height, list, containerRef], () => {
+  watch([size.width, size.height, () => toValue(list), containerRef], () => {
     calculateRange();
   });
 }
@@ -9592,6 +9716,8 @@ export {
   extendRef,
   formatDate,
   formatTimeAgo,
+  formatTimeAgoIntl,
+  formatTimeAgoIntlParts,
   get,
   getLifeCycleTarget,
   getSSRHandler,
@@ -9799,6 +9925,7 @@ export {
   useThrottleFn,
   useThrottledRefHistory,
   useTimeAgo,
+  useTimeAgoIntl,
   useTimeout,
   useTimeoutFn,
   useTimeoutPoll,
