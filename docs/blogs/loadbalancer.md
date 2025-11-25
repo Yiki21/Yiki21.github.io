@@ -25,12 +25,15 @@ stateDiagram-v2
     note right of DNS: DNS解析式负载
 ```
 
-## 基于硬件的
-- 啥都好就是很贵
-- 稳定性高、硬件加速能力强、功能丰富（例如健康检查、会话保持），但采购和维护成本高，通常用于流量很大的生产环境。
-F5、A10、Citrix ADC、Radware 这些东西
+## 基于硬件的负载均衡
 
-## 基于软件的
+啥都好就是贵。
+
+稳定性高、硬件加速能力强、功能丰富（健康检查、会话保持等），但采购和维护成本高，通常用于流量很大的生产环境。
+
+常见产品：F5、A10、Citrix ADC、Radware
+
+## 基于软件的负载均衡
 
 ### LVS(Linux Virtual Server)
 DNS解析到这些LVS服务器的IP上
@@ -62,19 +65,20 @@ stateDiagram-v2
 
 ```mermaid
 stateDiagram-v2
-        direction LR
-        Client --> VIP: 原始包
-        VIP --> VIP: 封装 (IP-in-IP)
-        VIP --> RS: 外层包转发 (L3 隧道)
-        RS --> Client: 解封装后直接回复
-        note right of RS: IP TUNNEL 解封装后回包不走 LVS
+    direction LR
+    Client --> VIP: 原始包
+    VIP --> VIP: 封装 (IP-in-IP)
+    VIP --> RS: 外层包转发 (L3 隧道)
+    RS --> Client: 解封装后直接回复
+    note right of RS: IP TUNNEL 解封装后回包不走 LVS
 ```
 
 因为外层改变了路由信息，L3 隧道允许跨 VLAN / 跨机房转发；响应包同样可以由 `RS` 直接发回客户端（源仍为客户端，目的仍为 `VIP`），因此回包不经过 LVS。
-**特点**
-1. IP in IP 比较复杂
-2. 性能依然高, 回包不走 LVS
-3. 不需要同 VLAN, 因为是 L3 隧道
+
+**特点：**
+1. IP in IP 封装比较复杂
+2. 性能依然高，回包不走 LVS
+3. 不需要同 VLAN，因为是 L3 隧道
 
 #### 3. NAT模式
 Client 发包到 `VIP`，LVS 使用 DNAT 将目的 IP 改为某个 `RIP`，然后转发给对应的 `RS`。因为 `RS` 看到包的目标地址已被改成 `RIP`，通常需要将默认网关指向 LVS（否则回包可能走错路）。
@@ -89,11 +93,11 @@ stateDiagram-v2
 ```
 
 
-**特点**
+**特点：**
 1. 结构简单，但性能相对较低（响应也要经过 LVS）
 2. `RS` 默认网关通常需要指向 LVS，否则回包会偏离
 
-#### 4. SNAT 
+#### 4. SNAT 模式 
 和 NAT 类似，但 LVS 会把请求包的源 IP 改为 `VIP`（或 LVS 的出口 IP），使 `RS` 无需把默认网关改为 LVS，回包可以直接路由回 LVS/公网。
 
 ```mermaid
